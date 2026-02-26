@@ -1,7 +1,7 @@
 import re
 import os
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.auth.settings import AuthSettings
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import GenericProxyConfig
@@ -42,6 +42,8 @@ mcp = FastMCP(
         required_scopes=["openid", "profile", "email", "address", "phone"],
     ),
 )
+
+
 
 @mcp.tool()
 def fetch_video_transcript(url: str) -> str:
@@ -123,6 +125,19 @@ def fetch_instructions(prompt_name: str) -> str:
     prompt_path = os.path.join(script_dir, "prompts", f"{prompt_name}.md")
     with open(prompt_path, "r") as f:
         return f.read()
+    
+@mcp.tool("greet_user", description="Greets the authenticated user.")
+def greet_user(context: Context):
+    # The 'context' object should contain the authenticated user's info
+    user_info = context.auth.user_info
+    if user_info:
+        user_name = user_info.get("name", "Unknown User")
+        return {"content": [
+            {"type": "text", "text": f"Hello, {user_name}! Your user ID is {user_info.get('user_id')}."}
+        ]}
+    else:
+        # This part should ideally not be reached if auth is enforced at server level
+        return {"content": [{"type": "text", "text": "Hello, unauthenticated user."}]}
 
 if __name__ == "__main__":
     mcp.run(transport='streamable-http')
