@@ -130,8 +130,11 @@ def fetch_instructions(prompt_name: str) -> str:
 def greet_user(context: Context):
     # The 'context' object should contain the authenticated user's info
     print(context.request_context.request)
-    user_info = context.request_context.request
-    return user_info
+    request_object = context.request_context.request
+    headers: dict[str, str] = request_object.headers
+    print(headers.keys)
+    print(headers.items)
+    return headers
 
 if __name__ == "__main__":
     mcp.run(transport='streamable-http')
