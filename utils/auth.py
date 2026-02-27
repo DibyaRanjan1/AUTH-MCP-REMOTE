@@ -4,9 +4,14 @@ Auth0 OAuth token verification for YouTube MCP Server.
 
 import os
 import asyncio
+import ssl
 from typing import Optional
+from wsgiref import headers
+import certifi
 from jwt import PyJWKClient, decode, InvalidTokenError
 from mcp.server.auth.provider import AccessToken, TokenVerifier
+import requests
+from model.UserInfo import UserInfo
 
 
 class Auth0TokenVerifier(TokenVerifier):
@@ -17,9 +22,11 @@ class Auth0TokenVerifier(TokenVerifier):
         self.audience = audience
         self.algorithms = algorithms or ["RS256"]
         self.jwks_url = f"https://{domain}/.well-known/jwks.json"
+        self.ssl_context = ssl.create_default_context(cafile=certifi.where())
         self.issuer = f"https://{domain}/"
         # PyJWKClient handles JWKS fetching and caching
-        self.jwks_client = PyJWKClient(self.jwks_url)
+        self.jwks_client = PyJWKClient(self.jwks_url,ssl_context=self.ssl_context)
+        self.userinfo_url = f"https://{domain}/userinfo"
 
     async def verify_token(self, token: str) -> AccessToken | None:
         """Verify Auth0 JWT token and return access information."""
@@ -39,7 +46,7 @@ class Auth0TokenVerifier(TokenVerifier):
                 issuer=self.issuer,
                 options={
                     "verify_signature": True,
-                    "verify_aud": True,
+                    "verify_aud": False,
                     "verify_iat": True,
                     "verify_exp": True,
                     "verify_iss": True,
@@ -69,6 +76,15 @@ class Auth0TokenVerifier(TokenVerifier):
             print(f"Token verification error: {e}")
             return None
 
+    def get_userinfo(self,access_token: str) -> UserInfo:
+       headers = {
+        "Authorization": f"{access_token}",
+        "Content-Type": "application/json"
+        }
+       response = requests.get(self.userinfo_url, headers=headers, timeout=10)
+       response.raise_for_status()
+
+       return UserInfo(**response.json())
 
 def create_auth0_verifier() -> Auth0TokenVerifier:
     """Create Auth0TokenVerifier from environment variables."""
@@ -88,3 +104,5 @@ def create_auth0_verifier() -> Auth0TokenVerifier:
         audience=audience,
         algorithms=algorithms
     )
+
+
