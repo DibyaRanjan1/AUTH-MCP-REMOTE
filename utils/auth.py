@@ -1,12 +1,12 @@
 """
-Auth0 OAuth token verification for YouTube MCP Server.
+Auth0 OAuth token verification for MCP Server.
 """
 
 import os
 import asyncio
 import ssl
 from typing import Optional
-from wsgiref import headers
+
 import certifi
 from jwt import PyJWKClient, decode, InvalidTokenError
 from mcp.server.auth.provider import AccessToken, TokenVerifier
@@ -76,15 +76,15 @@ class Auth0TokenVerifier(TokenVerifier):
             print(f"Token verification error: {e}")
             return None
 
-    def get_userinfo(self,access_token: str) -> UserInfo:
-       headers = {
-        "Authorization": f"{access_token}",
-        "Content-Type": "application/json"
+    def get_userinfo(self, access_token: str) -> UserInfo:
+        """Fetch user profile from Auth0 /userinfo using the Bearer token."""
+        headers = {
+            "Authorization": access_token,
+            "Content-Type": "application/json",
         }
-       response = requests.get(self.userinfo_url, headers=headers, timeout=10)
-       response.raise_for_status()
-
-       return UserInfo(**response.json())
+        response = requests.get(self.userinfo_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        return UserInfo(**response.json())
 
 def create_auth0_verifier() -> Auth0TokenVerifier:
     """Create Auth0TokenVerifier from environment variables."""

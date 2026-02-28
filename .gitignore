@@ -10,6 +10,9 @@ wheels/
 .venv
 .env
 
+# Gmail token store (per-user refresh tokens)
+.gmail_tokens.json
+
 # Mac
 .DS_Store
 
